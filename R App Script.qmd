@@ -1,0 +1,35 @@
+---
+title: "Project 1 Script"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(purrr)
+library(here)
+library(readxl)
+```
+
+
+```{r}
+#Using purrr to iterate and combine each sheet of an excel workbook
+#https://stackoverflow.com/questions/40550415/how-can-i-merge-multiple-sheets-of-an-excel-workbook-in-r
+
+sheets <- excel_sheets(here("Project1-STAT431", "generation_monthly.xlsx"))
+sheets <- sheets[-18]
+
+sheets_2011 <- sheets[0:5]
+sheets_2023 <- sheets[6:17]
+
+energy_data_2011 <- map_df(sheets_2011, ~ read_excel(here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x))
+energy_data_2023 <- map_df(sheets_2023, ~ read_excel(here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x, skip = 4))
+
+colnames(energy_data_2023)
+
+energy_data_2023 <- energy_data_2023 |>
+  select(-"GENERATION\r\n(Megawatthours)")
+
+energy_data <- rbind(energy_data_2011, energy_data_2023)
+```
+
