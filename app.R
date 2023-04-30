@@ -2,12 +2,8 @@
 # Libraries 
 library(shiny)
 library(tidyverse)
-library(readxl)
-library(janitor)
 library(leaflet)
-library(geojsonio)
-library(sp)
-library(scales)
+library(readxl)
 
 ################################################################################
 # Reading excel file
@@ -25,7 +21,7 @@ energy_data_2012_fhalf <- energy_data_2012 %>%
   filter(is.na(YEAR)) %>%
   select(7:12) %>%
   slice(-1:-3) %>%
-  row_to_names(row_number = 1)
+  janitor::row_to_names(row_number = 1)
 
 energy_data_2012_lhalf <- energy_data_2012 %>%
   filter(!is.na(YEAR)) %>%
@@ -50,7 +46,7 @@ energy_data <- energy_data %>%
 
 ################################################################################
 # Reading Spatial dataframe for states 
-states <- geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson", what = "sp")
+states <- geojsonio::geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson", what = "sp")
 
 ################################################################################
 # modeling and functions
@@ -60,7 +56,7 @@ makeSpatialStates <- function(df) {
   allstates <- data.frame(name = levels(as.factor(energy_data$name))) 
   df <- merge(df, allstates, all=TRUE)
   
-  df <- merge(states, df, by="name", all=FALSE)
+  df <- sp::merge(states, df, by="name", all=FALSE)
   
   return(df)
 }
@@ -128,7 +124,7 @@ server <- function(input, output, session) {
   
   observe(
     if(input$lm) {
-      updateSliderInput(session, "year", min = 2024, max = 2050)
+      updateSliderInput(session, "year", min = 2023, max = 2050)
     }
     else {
       updateSliderInput(session, "year", min = 2001, max = 2023)
@@ -152,7 +148,7 @@ server <- function(input, output, session) {
     bins <- c(-Inf, 0, 2000000, 4000000, 6000000, 8000000, 10000000, Inf)
     pal <- colorBin("Blues", domain = map_data()$gen, bins = bins)
     
-    g <- map(map_data()$gen, comma_format(digits = 12))
+    g <- map(map_data()$gen, scales::comma_format(digits = 12))
     n <- map_data()$name
     labels <- map2(n, g, \(n, g) paste(n, ": ", g, ifelse(is.na(g), "", " megawatthours"), sep="")) %>%
       lapply(htmltools::HTML)
