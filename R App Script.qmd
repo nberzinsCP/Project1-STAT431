@@ -56,7 +56,7 @@ energy_data <- energy_data %>%
          gen = `GENERATION (Megawatthours)`, 
          producer = `TYPE OF PRODUCER`,
          energy = `ENERGY SOURCE`) %>%
-  filter(!(name %in% c("US-Total", "DC"))) %>%
+  filter(!(name %in% c("US-TOTAL", "DC"))) %>%
   mutate(name = state.name[match(name, state.abb)],
          gen = as.numeric(gen),
          MONTH = month.name[as.numeric(MONTH)],
@@ -73,7 +73,7 @@ states <- geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson
 model <- lm(gen ~ ., data = energy_data)
 
 map_data <- data.frame(name = levels(as.factor(energy_data$name)), 
-                       YEAR = 2050, 
+                       YEAR = 2043, 
                        MONTH = "October",
                        producer = "Total Electric Power Industry",
                        energy = "Total") 
@@ -88,8 +88,13 @@ map_data <- select(map_data, name, gen)
 map_data <- energy_data %>%
   filter(YEAR == 2002, 
          MONTH == "January", 
+<<<<<<< HEAD
          producer == "Total Electric Power Industry", 
          energy == "Total") %>%
+=======
+         producer == "Electric Generators, Electric Utilities", 
+         energy == "Coal") %>%
+>>>>>>> 0807dd0a21547a4aa65cdb2959d10a0210331794
   select(name, gen)
 
 # Input values for year, month, producer, and energy. 
@@ -99,6 +104,9 @@ map_data <- merge(map_data, allstates, all=T)
 ```
 
 ```{r merge}
+allstates <- data.frame(name = levels(as.factor(energy_data$name))) 
+map_data <- merge(map_data, allstates, all=T)
+
 map_data <- merge(states, map_data, by="name", all=F)
 ```
 
@@ -118,7 +126,11 @@ leaflet(map_data) %>%
     id = "mapbox.light",
     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'),
     minZoom = 3, #gives barrier to how far out you can go
+<<<<<<< HEAD
     maxZoom = 6, #gives barrier to how far in you can go
+=======
+    maxZoom = 6 #gives barrier to how far in you can go
+>>>>>>> 0807dd0a21547a4aa65cdb2959d10a0210331794
     )) %>%
   addPolygons(fillColor = ~pal(gen),
     weight = 2,
