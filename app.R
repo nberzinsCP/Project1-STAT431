@@ -158,8 +158,8 @@ server <- function(input, output, session) {
       addProviderTiles("MapBox", options = providerTileOptions(
         id = "mapbox.light",
         accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'),
-        minZoom = 3, #gives barrier to how far out you can go
-        maxZoom = 6 #gives barrier to how far in you can go
+        minZoom = 3, 
+        maxZoom = 6 
         )) %>%
       addPolygons(fillColor = ~pal(gen),
                   weight = 2,
