@@ -4,32 +4,146 @@ format: html
 editor: visual
 ---
 
-```{r}
-library(tidyverse)
-library(purrr)
-library(here)
-library(readxl)
+## ALL OUTSIDE OF APP
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 ```
 
+```{r libraries}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(leaflet)
+library(geojsonio)
+library(sp)
+library(scales)
+```
 
-```{r}
+```{r readxl}
 #Using purrr to iterate and combine each sheet of an excel workbook
 #https://stackoverflow.com/questions/40550415/how-can-i-merge-multiple-sheets-of-an-excel-workbook-in-r
 
-sheets <- excel_sheets(here("Project1-STAT431", "generation_monthly.xlsx"))
+sheets <- excel_sheets(here::here("Project1-STAT431","generation_monthly.xlsx"))
 sheets <- sheets[-18]
 
+sheets_2012 <- sheets[0:6]
+sheets_2023 <- sheets[7:17]
+
+energy_data_2012 <- map_df(sheets_2012, ~ read_excel(here::here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x))
+energy_data_2023 <- map_df(sheets_2023, ~ read_excel(here::here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x, skip = 4))
+```
+
+```{r}
+sheets <- excel_sheets(here::here("Project1-STAT431", "generation_monthly.xlsx"))
+sheets <- sheets[-18]
 sheets_2011 <- sheets[0:5]
 sheets_2023 <- sheets[6:17]
-
-energy_data_2011 <- map_df(sheets_2011, ~ read_excel(here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x))
-energy_data_2023 <- map_df(sheets_2023, ~ read_excel(here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x, skip = 4))
-
-colnames(energy_data_2023)
+energy_data_2011 <- map_df(sheets_2011, ~ read_excel(here::here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x))
+energy_data_2023 <- map_df(sheets_2023, ~ read_excel(here::here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x, skip = 4))
 
 energy_data_2023 <- energy_data_2023 |>
+  mutate(`GENERATION (Megawatthours)` = coalesce(`GENERATION (Megawatthours)`, `GENERATION\r\n(Megawatthours)`)) |>
   select(-"GENERATION\r\n(Megawatthours)")
 
 energy_data <- rbind(energy_data_2011, energy_data_2023)
 ```
 
+
+```{r data cleaning}
+energy_data <- energy_data %>%
+  rename(name = STATE, 
+         gen = `GENERATION (Megawatthours)`, 
+         producer = `TYPE OF PRODUCER`,
+         energy = `ENERGY SOURCE`) %>%
+  filter(!(name %in% c("US-TOTAL", "DC"))) %>%
+  mutate(name = state.name[match(name, state.abb)],
+         gen = as.numeric(gen),
+         MONTH = month.name[as.numeric(MONTH)],
+         YEAR = as.numeric(YEAR)) 
+```
+
+```{r spatialdf for states}
+states <- geojson_read("https://rstudio.github.io/leaflet/json/us-states.geojson", what = "sp")
+```
+
+## INSIDE APP
+
+```{r using lm to predict new data example}
+model <- lm(gen ~ ., data = energy_data)
+
+map_data <- data.frame(name = levels(as.factor(energy_data$name)), 
+                       YEAR = 2043, 
+                       MONTH = "October",
+                       producer = "Total Electric Power Industry",
+                       energy = "Total") 
+# Input values for state, year, month, producer, and energy. 
+
+map_data$gen = predict(model, newdata = map_data)
+
+map_data <- select(map_data, name, gen)
+```
+
+```{r using current data example}
+map_data <- energy_data %>%
+  filter(YEAR == 2002, 
+         MONTH == "January", 
+<<<<<<< HEAD
+         producer == "Total Electric Power Industry", 
+         energy == "Total") %>%
+=======
+         producer == "Electric Generators, Electric Utilities", 
+         energy == "Coal") %>%
+>>>>>>> 0807dd0a21547a4aa65cdb2959d10a0210331794
+  select(name, gen)
+
+# Input values for year, month, producer, and energy. 
+  
+allstates <- data.frame(name = levels(as.factor(energy_data$name))) 
+map_data <- merge(map_data, allstates, all=T)
+```
+
+```{r merge}
+allstates <- data.frame(name = levels(as.factor(energy_data$name))) 
+map_data <- merge(map_data, allstates, all=T)
+
+map_data <- merge(states, map_data, by="name", all=F)
+```
+
+```{r leaflet}
+# followed leaflet choropleths tutorial: https://rstudio.github.io/leaflet/choropleths.html
+bins <- c(-Inf, 0, 2000000, 4000000, 6000000, 8000000, 10000000, Inf)
+pal <- colorBin("Blues", domain = map_data$gen, bins = bins)
+
+g <- map(map_data$gen, comma_format(digits = 12))
+n <- map_data$name
+labels <- map2(n, g, \(n, g) paste(n, ": ", g, ifelse(is.na(g), "", " megawatthours"), sep="")) %>%
+  lapply(htmltools::HTML)
+
+leaflet(map_data) %>%
+  setView(-96, 37.8, 4) %>%
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'),
+    minZoom = 3, #gives barrier to how far out you can go
+<<<<<<< HEAD
+    maxZoom = 6, #gives barrier to how far in you can go
+=======
+    maxZoom = 6 #gives barrier to how far in you can go
+>>>>>>> 0807dd0a21547a4aa65cdb2959d10a0210331794
+    )) %>%
+  addPolygons(fillColor = ~pal(gen),
+    weight = 2,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlightOptions = highlightOptions(
+      weight = 5,
+      color = "#700",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(textsize = "13px")) %>% 
+  addLegend(pal = pal, values = ~gen, opacity = 0.7, title = "In Megawatthours",
+    position = "bottomright")
+```

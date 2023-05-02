@@ -8,7 +8,6 @@ library(sp)
 library(scales)
 library(shiny)
 
-
 #Importing data
 
 sheets <- excel_sheets(here::here("Project1-STAT431", "generation_monthly.xlsx"))
