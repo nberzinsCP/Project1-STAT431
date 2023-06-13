@@ -19,7 +19,7 @@ sheets_2023 <- sheets[6:17]
 energy_data_2011 <- map_df(sheets_2011, ~ read_excel(here::here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x))
 energy_data_2023 <- map_df(sheets_2023, ~ read_excel(here::here("Project1-STAT431", "generation_monthly.xlsx"), sheet = .x, skip = 4))
 
-#Excel sheet formatting error, merging data from two columns
+#Excel sheet formatting error, merging data from two columns  
 energy_data_2023 <- energy_data_2023 |>
   mutate(`GENERATION (Megawatthours)` = coalesce(`GENERATION (Megawatthours)`, `GENERATION\r\n(Megawatthours)`)) |>
   select(-"GENERATION\r\n(Megawatthours)")
@@ -88,6 +88,14 @@ makeObserve <- function(y, m, p, e) { #given user input, alter the graph to show
 
 ui <- fluidPage(
   titlePanel("Energy Output Per State (in megawatthours)"),
+  
+  tags$p("This app aims to display the energy output per state (in megawatt hours) 
+         given a variety of customizable inputs. The data used to create this 
+         application can be found on the U.S. Energy Information Administration’s Website."),
+  
+  tags$p("You have the option of either looking at historical energy output data or 
+         displaying what our algorithm believes will be the future energy output per state. 
+         You may also change which producer or type of energy can be displayed on the map below."),
   
   radioButtons("fordat",
                 "What would you like to do?",
